@@ -24,7 +24,7 @@ const Home = () => {
                 />
 
                 <ActionCard
-                    onPress={() => console.log('Audio')}
+                    onPress={() => navigator.navigate("MicrophoneScreen")}
                     iconName="mic-outline"
                     title="Describe Injury"
                     description="Explain the situation with your voice"
