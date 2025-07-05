@@ -1,51 +1,64 @@
-import React, { Component } from 'react'
-import { Text, View, Button, StyleSheet } from 'react-native'
-import { useNavigation } from '@react-navigation/native'
-import Bar from '../components/bar'
-import InputButton from '../components/inputButton'
+import React from 'react';
+import { Text, View, StyleSheet, SafeAreaView, StatusBar } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import Bar from '../components/bar';
+import ActionCard from '../components/ActionCard';
 
 const Home = () => {
     const navigator = useNavigation();
     return (
-        <View>
+        <SafeAreaView style={styles.screen}>
+            <StatusBar barStyle="dark-content" />
             <Bar />
-            <View style={styles.textContainer}>
-                <Text style={styles.header}>PoktAid</Text>
-                <Text style={styles.noworry}>No need to panic, you won't die.</Text>
+            <View style={styles.content}>
+                <View style={styles.headerContainer}>
+                    <Text style={styles.header}>Your First-Aid Assistant</Text>
+                    <Text style={styles.subHeader}>How can we help you today?</Text>
+                </View>
+
+                <ActionCard
+                    onPress={() => navigator.navigate("CameraScreen")}
+                    iconName="camera-outline"
+                    title="Scan Injury"
+                    description="Use your camera to identify the issue"
+                />
+
+                <ActionCard
+                    onPress={() => navigator.navigate("MicrophoneScreen")}
+                    iconName="mic-outline"
+                    title="Describe Injury"
+                    description="Explain the situation with your voice"
+                />
             </View>
-            <View style={styles.container}>
-                <InputButton isCamera={true} />
-                <InputButton isCamera={false} />
-            </View>
-        </View>
-    )
-}
+        </SafeAreaView>
+    );
+};
 
 const styles = StyleSheet.create({
-    container: {
-        paddingTop: '10%',
-        paddingBottom: '10%',
-        width: '100%',
-        height: '80%',
-        flexDirection: 'column',
-        alignItems: 'center',
+    screen: {
+        flex: 1,
+        backgroundColor: '#f7f8fa', // A very light, calming gray
     },
-    text: {
-        color: '#2596be',
-    },
-    textContainer: {
-        width: '100%',
-        padding: 10,
+    content: {
+        flex: 1,
         alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 20,
+    },
+    headerContainer: {
+        alignItems: 'center',
+        marginBottom: 40,
     },
     header: {
-        color: '#2596be',
+        color: '#2c3e50',
         fontWeight: 'bold',
-        fontSize: 32,
+        fontSize: 26,
     },
-    noworry: {
-        color: 'gray',
+    subHeader: {
+        color: '#7f8c8d',
+        fontSize: 16,
+        marginTop: 8,
     },
 });
 
-export default Home
+export default Home;
