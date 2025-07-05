@@ -3,17 +3,17 @@ import { Text, View, TouchableOpacity, StyleSheet } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useNavigation } from '@react-navigation/native'
 
-const NavigationButton = ({isBackButton}) => {
+const NavigationButton = ({isBackButton, _press_fn}) => {
     const navigator = useNavigation();
     return (
         <View>
             {isBackButton ? (
-                <TouchableOpacity onPress={() => navigator.goBack()} style={styles.back}>
+                <TouchableOpacity onPress={_press_fn} style={styles.back}>
                     <Ionicons name="arrow-back-outline" />
                     <Text>Back</Text>
                 </TouchableOpacity>
                 ): (
-                    <TouchableOpacity style={styles.next}>
+                    <TouchableOpacity onPress={_press_fn} style={styles.next}>
                         <Text>Next</Text>
                         <Ionicons name='arrow-forward-outline' />
                     </TouchableOpacity>
