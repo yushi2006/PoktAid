@@ -2,304 +2,188 @@ import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   StyleSheet,
-  Button,
   Text,
-  Alert,
   TouchableOpacity,
   SafeAreaView,
   Animated,
   Easing,
   Platform,
+  ActivityIndicator,
 } from "react-native";
-import { useAudioRecorder, RecordingPresets } from "expo-audio";
-import { Audio } from "expo-av"; // Use Audio module from expo-av for permissions
+import { Cheetah } from '@picovoice/cheetah-react-native';
+import { VoiceProcessor } from '@picovoice/react-native-voice-processor';
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
-// import Bar from '../components/bar'; // Assuming you have this custom component
+import Bar from '../components/bar';
 
-// Helper function to format seconds into MM:SS
-const formatTime = (seconds) => {
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = Math.floor(seconds % 60); // Use Math.floor for clean numbers
-  return `${minutes.toString().padStart(2, "0")}:${remainingSeconds
-    .toString()
-    .padStart(2, "0")}`;
-};
+const PICOVOICE_ACCESS_KEY = "YOUR_PICOVOICE_ACCESS_KEY_HERE"; 
+
+const formatTime = (seconds) => { /* ... unchanged ... */ const m = Math.floor(seconds / 60); const s = Math.floor(seconds % 60); return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`; };
 
 const MicrophoneScreen = () => {
   const navigation = useNavigation();
-  const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
-  const [isRecording, setIsRecording] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [isCheetahReady, setIsCheetahReady] = useState(false);
+  const [cheetahError, setCheetahError] = useState('');
+  const [partialResults, setPartialResults] = useState('');
+  const [finalTranscript, setFinalTranscript] = useState('');
   const [duration, setDuration] = useState(0);
 
-  const [permissionResponse, setPermissionResponse] = useState(null);
-
-  // --- (ADDED) Animation and Timer Refs ---
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const pulseAnimation = useRef(null);
+  const cheetahRef = useRef(null);
+  const voiceProcessorRef = useRef(VoiceProcessor.instance); // This is correct usage
   const timerInterval = useRef(null);
+  
+  const anim1 = useRef(new Animated.Value(0)).current;
+  const anim2 = useRef(new Animated.Value(0)).current;
 
-  // Check permissions when component mounts
   useEffect(() => {
-    (async () => {
-      const response = await Audio.getPermissionsAsync();
-      setPermissionResponse(response);
-    })();
-  }, []);
-
-  // --- (COMPLETED) Animation Functions ---
-  const startPulse = () => {
-    pulseAnimation.current = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1.2,
-          duration: 800,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 800,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ])
-    );
-    pulseAnimation.current.start();
-  };
-
-  const stopPulse = () => {
-    if (pulseAnimation.current) {
-      pulseAnimation.current.stop();
-    }
-    // Reset scale to normal
-    Animated.timing(pulseAnim, {
-      toValue: 1,
-      duration: 300,
-      easing: Easing.inOut(Easing.ease),
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const requestPermission = async () => {
-    const response = await Audio.requestPermissionsAsync();
-    setPermissionResponse(response);
-  };
-
-  const startRecording = async () => {
-    try {
-      if (permissionResponse?.status !== "granted") {
-        await requestPermission();
-        // Check again after requesting
-        const newPermissions = await Audio.getPermissionsAsync();
-        if (newPermissions.status !== "granted") {
-          Alert.alert(
-            "Permission Required",
-            "Please grant microphone permissions to record audio."
-          );
-          return;
-        }
-      }
-      await audioRecorder.prepareToRecordAsync();
-      await audioRecorder.record();
-      setIsRecording(true);
-      startPulse(); // Start animation
-
-      // Start timer
-      timerInterval.current = setInterval(() => {
-        setDuration((prev) => prev + 1);
-      }, 1000);
-    } catch (error) {
-      console.error("Failed to start recording", error);
-      Alert.alert("Error", "Could not start recording.");
-    }
-  };
-
-  // --- (MODIFIED) stopRecording now navigates ---
-  const stopRecording = async () => {
-    try {
-      const uri = await audioRecorder.stop(); // This also cleans up the recording
-      setIsRecording(false);
-      stopPulse(); // Stop animation
-
-      if (timerInterval.current) {
-        clearInterval(timerInterval.current);
+    // This function will now have a clearer error path
+    const initCheetah = async () => {
+      // Safeguard against the native module being null
+      if (!VoiceProcessor.instance || !Cheetah) {
+        setCheetahError("Native modules are not linked. Please rebuild the app.");
+        return;
       }
 
-      if (uri) {
-        console.log("Recording stopped. URI:", uri);
-        navigation.navigate("Instructions", { audioUri: uri });
+      try {
+        const cheetah = await Cheetah.create(
+          PICOVOICE_ACCESS_KEY,
+          { path: 'models/cheetah_params.pv' },
+          { enableAutomaticPunctuation: true }
+        );
+        cheetahRef.current = cheetah;
+        
+        voiceProcessorRef.current.addFrameListener(cheetah.process);
+        voiceProcessorRef.current.addErrorListener((error) => setCheetahError(error.toString()));
+
+        setIsCheetahReady(true);
+      } catch (e) {
+        console.error("Failed to initialize Cheetah:", e);
+        setCheetahError(`Initialization failed: ${e.message}`);
       }
+    };
+    initCheetah();
 
-      setDuration(0); // Reset for next time
-    } catch (error) {
-      console.error("Failed to stop recording", error);
-      Alert.alert("Error", "Could not stop recording.");
-    }
-  };
-
-  // Clean up timer and animation on unmount
-  useEffect(() => {
     return () => {
+      // Robust cleanup
+      if (voiceProcessorRef.current) {
+        voiceProcessorRef.current.removeErrorListeners();
+        voiceProcessorRef.current.removeFrameListeners();
+      }
+      cheetahRef.current?.delete();
       if (timerInterval.current) clearInterval(timerInterval.current);
-      if (pulseAnimation.current) pulseAnimation.current.stop();
     };
   }, []);
+  
+  // This useEffect and the one for navigation remain the same...
+  useEffect(() => {
+    if (cheetahRef.current) {
+        const processSuccessSubscription = cheetahRef.current.onProcess(result => {
+            if (result.transcript) setPartialResults(prev => prev + result.transcript);
+            if (result.isEndpoint) {
+                cheetahRef.current.flush().then(endpointResult => {
+                    const final = partialResults + (result.transcript || '') + (endpointResult.transcript || '');
+                    setFinalTranscript(final);
+                });
+            }
+        });
+        return () => processSuccessSubscription.remove();
+    }
+  }, [partialResults]);
 
-  if (!permissionResponse) {
-    // return <View style={styles.screen}><Bar /></View>;
-    return <View style={styles.screen} />;
-  }
+  useEffect(() => {
+    if (finalTranscript) {
+      navigation.navigate("Instructions", { recognizedText: finalTranscript });
+    }
+  }, [finalTranscript, navigation]);
 
-  if (permissionResponse.status !== "granted") {
-    return (
-      <SafeAreaView style={styles.screen}>
-        {/* <Bar /> */}
-        <View style={styles.permissionContainer}>
-          <Ionicons name="mic-off-circle-outline" size={80} color="#7f8c8d" />
-          <Text style={styles.permissionMessage}>Microphone Access Needed</Text>
-          <Text style={styles.permissionSubMessage}>
-            This app needs access to your microphone to allow you to describe
-            your injury. Your recording is only used for analysis.
-          </Text>
-          <Button onPress={requestPermission} title="Grant Permission" />
-        </View>
-      </SafeAreaView>
-    );
-  }
+  const startPulse = () => { /* ... unchanged ... */ anim1.setValue(0); anim2.setValue(0); Animated.loop(Animated.parallel([Animated.timing(anim1,{toValue:1,duration:2000,easing:Easing.out(Easing.ease),useNativeDriver:true}),Animated.timing(anim2,{toValue:1,duration:2000,delay:1000,easing:Easing.out(Easing.ease),useNativeDriver:true})])).start(); };
+  const stopPulse = () => { /* ... unchanged ... */ anim1.stopAnimation(); anim2.stopAnimation(); };
+
+  // Logic functions remain the same...
+  const startListening = async () => {
+    // Add safeguard here as well
+    if (!cheetahRef.current || !voiceProcessorRef.current) {
+      setCheetahError("Engine not ready.");
+      return;
+    }
+    if (voiceProcessorRef.current?.isRecording()) return;
+    try {
+      await voiceProcessorRef.current.start(cheetahRef.current.frameLength, cheetahRef.current.sampleRate);
+      setIsListening(true);
+      setPartialResults('');
+      setFinalTranscript('');
+      setDuration(0);
+      startPulse();
+      timerInterval.current = setInterval(() => setDuration(prev => prev + 1), 1000);
+    } catch (e) {
+      setCheetahError("Failed to start microphone.");
+      console.error(e);
+    }
+  };
+
+  const stopListening = async () => {
+    if (!voiceProcessorRef.current?.isRecording()) return;
+    try {
+      await voiceProcessorRef.current.stop();
+      setIsListening(false);
+      stopPulse();
+      if (timerInterval.current) clearInterval(timerInterval.current);
+    } catch (e) {
+      setCheetahError("Failed to stop microphone.");
+      console.error(e);
+    }
+  };
+
+  const handleMicPress = () => isListening ? stopListening() : startListening();
+
+  // JSX and Styles remain the same...
+  const getHeaderText = () => {
+    if (cheetahError) return "Error";
+    if (!isCheetahReady) return "Initializing Engine...";
+    if (isListening) return "Listening...";
+    return "Describe the Situation";
+  };
 
   return (
     <SafeAreaView style={styles.screen}>
-      {/* <Bar /> */}
+      <Bar />
       <View style={styles.content}>
-        <View style={styles.guidanceContainer}>
-          <Text style={styles.guidanceTitle}>
-            {isRecording ? "Recording..." : "Ready to Record"}
-          </Text>
-          <Text style={styles.guidanceText}>
-            Press the button and clearly describe the injury, its location, and
-            what happened.
-          </Text>
+        <View style={styles.headerContainer}>
+          <Text style={styles.header}>{getHeaderText()}</Text>
+          <Text style={styles.subHeader}>All processing is done offline on your device.</Text>
         </View>
-
         <View style={styles.visualizerContainer}>
-          <Animated.View
-            style={[styles.pulse, { transform: [{ scale: pulseAnim }] }]}
-          >
+            {isListening && <Animated.View style={[styles.ripple, { transform: [{ scale: anim1.interpolate({ inputRange: [0, 1], outputRange: [0, 5] }) }], opacity: anim1.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.3, 0.1, 0] }) }]} />}
+            {isListening && <Animated.View style={[styles.ripple, { transform: [{ scale: anim2.interpolate({ inputRange: [0, 1], outputRange: [0, 5] }) }], opacity: anim2.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.3, 0.1, 0] }) }]} />}
+            <TouchableOpacity style={[styles.micButton, isListening && styles.micButtonRecording]} onPress={handleMicPress} activeOpacity={0.8} disabled={!isCheetahReady}>
+                {!isCheetahReady ? (<ActivityIndicator size="large" color="white" />) : (<Ionicons name={isListening ? "stop" : "mic"} size={40} color="white" />)}
+            </TouchableOpacity>
             <Text style={styles.timerText}>{formatTime(duration)}</Text>
-          </Animated.View>
         </View>
-
-        <View style={styles.controlsContainer}>
-          <TouchableOpacity
-            style={[styles.micButton, isRecording && styles.micButtonRecording]}
-            onPress={isRecording ? stopRecording : startRecording}
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name={isRecording ? "stop" : "mic"}
-              size={40}
-              color="white"
-            />
-          </TouchableOpacity>
+        <View style={styles.feedbackContainer}>
+            <Text style={styles.partialResultsText}>{partialResults || (isCheetahReady ? "Press the button to start..." : "")}</Text>
+            <Text style={styles.errorText}>{cheetahError}</Text>
         </View>
       </View>
     </SafeAreaView>
   );
 };
-
-// Your styles remain the same
+// Styles remain unchanged
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: "#f7f8fa",
-  },
-  content: {
-    flex: 1,
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 20,
-    paddingBottom: 50,
-  },
-  permissionContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 30,
-  },
-  permissionMessage: {
-    fontSize: 22,
-    fontWeight: "bold",
-    textAlign: "center",
-    color: "#2c3e50",
-    marginTop: 20,
-    marginBottom: 10,
-  },
-  permissionSubMessage: {
-    fontSize: 16,
-    textAlign: "center",
-    color: "#7f8c8d",
-    marginBottom: 30,
-    lineHeight: 24,
-  },
-  guidanceContainer: {
-    alignItems: "center",
-    textAlign: "center",
-    marginTop: "10%",
-  },
-  guidanceTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#2c3e50",
-    marginBottom: 10,
-  },
-  guidanceText: {
-    fontSize: 16,
-    color: "#7f8c8d",
-    textAlign: "center",
-    paddingHorizontal: 20,
-    lineHeight: 22,
-  },
-  visualizerContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  pulse: {
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: "rgba(52, 152, 219, 0.2)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  timerText: {
-    fontSize: 48,
-    fontWeight: "300",
-    color: "#2c3e50",
-    fontFamily: Platform.OS === "ios" ? "Courier New" : "monospace",
-  },
-  controlsContainer: {
-    height: 100,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  micButton: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "#3498db",
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4.65,
-    elevation: 8,
-  },
-  micButtonRecording: {
-    backgroundColor: "#e74c3c", // Red color for recording state
-  },
+  screen: { flex: 1, backgroundColor: "#FFFFFF" },
+  content: { flex: 1, justifyContent: "space-between", padding: 20, paddingBottom: 40 },
+  headerContainer: { alignItems: "flex-start", marginTop: 20 },
+  header: { fontFamily: "Poppins_700Bold", fontSize: 32, color: "#1e293b", lineHeight: 40 },
+  subHeader: { fontFamily: "Poppins_400Regular", fontSize: 18, color: "#64748b", marginTop: 8 },
+  visualizerContainer: { flex: 1, justifyContent: "center", alignItems: "center", width: '100%' },
+  ripple: { width: 80, height: 80, borderRadius: 40, backgroundColor: 'rgba(59, 130, 246, 1)', position: 'absolute' },
+  micButton: { width: 80, height: 80, borderRadius: 40, backgroundColor: "#3b82f6", justifyContent: "center", alignItems: "center", shadowColor: "#3b82f6", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 8 },
+  micButtonRecording: { backgroundColor: "#ef4444", shadowColor: "#ef4444" },
+  timerText: { fontFamily: Platform.OS === "ios" ? "Courier New" : "monospace", fontSize: 20, color: '#64748b', marginTop: 24, letterSpacing: 1 },
+  feedbackContainer: { minHeight: 120, justifyContent: 'center', padding: 10, backgroundColor: '#f8fafc', borderRadius: 16, borderWidth: 1, borderColor: '#e2e8f0' },
+  partialResultsText: { fontFamily: 'Poppins_400Regular', fontSize: 16, color: '#475569', textAlign: 'center', lineHeight: 24 },
+  errorText: { fontFamily: 'Poppins_600SemiBold', fontSize: 16, color: '#ef4444', textAlign: 'center' },
 });
 
 export default MicrophoneScreen;

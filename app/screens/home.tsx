@@ -1,14 +1,16 @@
 import React from "react";
 import { Text, View, StyleSheet, SafeAreaView, StatusBar } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import Bar from "../components/bar";
-import ActionCard from "../components/ActionCard";
+import ActionCard from "../components/ActionCard"; // We will redesign this
+import EmergencyButton from "../components/EmergencyButton"; // A new component
+import Bar from '../components/bar';
 
 const Home = () => {
   const navigator = useNavigation();
+
   return (
     <SafeAreaView style={styles.screen}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
       <Bar />
       <View style={styles.content}>
         <View style={styles.headerContainer}>
@@ -16,19 +18,23 @@ const Home = () => {
           <Text style={styles.subHeader}>How can we help you today?</Text>
         </View>
 
-        <ActionCard
-          onPress={() => navigator.navigate("CameraScreen")}
-          iconName="camera-outline"
-          title="Scan Injury"
-          description="Use your camera to identify the issue"
-        />
-
-        <ActionCard
-          onPress={() => navigator.navigate("MicrophoneScreen")}
-          iconName="mic-outline"
-          title="Describe Injury"
-          description="Explain the situation with your voice"
-        />
+        <View style={styles.actionsContainer}>
+          <ActionCard
+            onPress={() => navigator.navigate("CameraScreen")}
+            iconName="camera-outline"
+            title="Scan Injury"
+            description="Use your camera to identify the issue"
+          />
+          <ActionCard
+            onPress={() => navigator.navigate("MicrophoneScreen")}
+            iconName="mic-outline"
+            title="Describe Injury"
+            description="Explain the situation with your voice"
+          />
+        </View>
+        
+        {/* The new, dedicated emergency button at the bottom */}
+        <EmergencyButton />
       </View>
     </SafeAreaView>
   );
@@ -37,27 +43,32 @@ const Home = () => {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#f7f8fa",
+    backgroundColor: "#FFFFFF", // A cleaner white background
   },
   content: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 20,
+    justifyContent: "space-between", // Pushes header up and emergency button down
+    padding: 20,
+    paddingBottom: 40, // More space at the bottom
   },
   headerContainer: {
-    alignItems: "center",
-    marginBottom: 40,
+    alignItems: "flex-start", // Left-align for a more formal feel
+    marginTop: 20,
   },
   header: {
-    color: "#2c3e50",
-    fontWeight: "bold",
-    fontSize: 26,
+    fontFamily: "Poppins_700Bold",
+    fontSize: 32,
+    color: "#1e293b", // A softer black (slate-800)
+    lineHeight: 40,
   },
   subHeader: {
-    color: "#7f8c8d",
-    fontSize: 16,
+    fontFamily: "Poppins_400Regular",
+    fontSize: 18,
+    color: "#64748b", // A lighter gray (slate-500)
     marginTop: 8,
+  },
+  actionsContainer: {
+    marginTop: -80, // Pulls the cards up into the middle space
   },
 });
 

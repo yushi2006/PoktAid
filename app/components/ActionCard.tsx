@@ -1,51 +1,64 @@
-// components/ActionCard.js
-import React from "react";
-import { Text, TouchableOpacity, StyleSheet } from "react-native";
+import React, { useRef } from "react";
+import { Text, StyleSheet, Animated, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
-const ActionCard = ({ iconName, title, description, onPress }) => {
+const ActionCard = ({ onPress, iconName, title, description }) => {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  const pressIn = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 0.97,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const pressOut = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      friction: 5,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
+  };
+
   return (
-    <TouchableOpacity onPress={onPress} style={styles.card}>
-      <Ionicons name={iconName} color={"#3498db"} size={48} />
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.description}>{description}</Text>
-    </TouchableOpacity>
+    <Pressable onPress={onPress} onPressIn={pressIn} onPressOut={pressOut}>
+      <Animated.View style={[styles.card, { transform: [{ scale: scaleAnim }] }]}>
+        <Ionicons name={iconName} size={32} color="#3b82f6" />
+        <Text style={styles.title}>{title}</Text>
+        <Text style={styles.description}>{description}</Text>
+      </Animated.View>
+    </Pressable>
   );
 };
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: "white",
-    width: "90%",
-    paddingVertical: 30,
-    paddingHorizontal: 20,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: "#f8fafc", // A very light, almost white gray (slate-50)
+    padding: 24,
+    borderRadius: 16,
     marginBottom: 20,
-    // iOS Shadow
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    // Android Shadow
-    elevation: 5,
+    borderWidth: 1,
+    borderColor: "#e2e8f0", // (slate-200)
+    // Subtle shadow for depth
+    shadowColor: "#94a3b8",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 15,
+    elevation: 1,
   },
   title: {
+    fontFamily: "Poppins_600SemiBold",
     fontSize: 20,
-    fontWeight: "bold",
-    color: "#2c3e50",
-    marginTop: 15,
-    textAlign: "center",
+    color: "#1e293b", // slate-800
+    marginTop: 12,
   },
   description: {
-    fontSize: 14,
-    color: "#7f8c8d",
-    marginTop: 5,
-    textAlign: "center",
+    fontFamily: "Poppins_400Regular",
+    fontSize: 15,
+    color: "#64748b", // slate-500
+    marginTop: 4,
+    lineHeight: 22,
   },
 });
 

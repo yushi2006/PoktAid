@@ -4,7 +4,7 @@ import { Text, View, StyleSheet } from "react-native";
 const InstructionCard = ({ step, title, description }) => {
   return (
     <View style={styles.card}>
-      <Text style={styles.stepText}>{step}</Text>
+      <Text style={styles.stepText}>{step.toUpperCase()}</Text>
       <Text style={styles.titleText}>{title}</Text>
       <View style={styles.divider} />
       <Text style={styles.descriptionText}>{description}</Text>
@@ -14,41 +14,39 @@ const InstructionCard = ({ step, title, description }) => {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: "white",
-    borderRadius: 20,
-    width: "90%",
-    minHeight: "60%", // Use minHeight for flexibility
+    backgroundColor: "#f8fafc", // slate-50
+    borderRadius: 24,
+    width: "100%",
+    flex: 1,
     padding: 30,
-    // iOS Shadow
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    // Android Shadow
-    elevation: 5,
+    borderWidth: 1,
+    borderColor: "#e2e8f0", // slate-200
   },
   stepText: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#3498db",
+    fontFamily: 'Poppins_700Bold',
+    fontSize: 14,
+    color: "#3b82f6", // blue-500
+    letterSpacing: 1,
     marginBottom: 8,
   },
   titleText: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#2c3e50",
+    fontFamily: 'Poppins_700Bold',
+    fontSize: 30,
+    color: "#1e293b", // slate-800
+    lineHeight: 38,
     marginBottom: 20,
   },
   divider: {
     height: 1,
-    backgroundColor: "#ecf0f1",
+    backgroundColor: "#e2e8f0", // slate-200
     width: "100%",
     marginBottom: 20,
   },
   descriptionText: {
+    fontFamily: 'Poppins_400Regular',
     fontSize: 18,
-    color: "#34495e",
-    lineHeight: 26, // Crucial for readability
+    color: "#475569", // slate-600
+    lineHeight: 28,
   },
 });
 
