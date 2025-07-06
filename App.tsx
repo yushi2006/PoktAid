@@ -7,18 +7,30 @@ import Instructions from './app/screens/instructions';
 import CameraScreen from './app/screens/camera';
 import MicrophoneScreen from './app/screens/microphone';
 import LoadingScreen from './app/screens/loading';
+import { useFonts, Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold } from '@expo-google-fonts/poppins';
 
 export type RootStackParamList = {
-  Microphone: undefined;
-  Camera: undefined;
   Home: undefined;
-  Instructions: { photoUri: string } | { audioUri: string };
+  Camera: undefined;
+  Microphone: undefined;
+  // Instructions can now receive one of three param combinations
+  Instructions: 
+    | { photoUri: string } 
+    | { recognizedText: string }
+    | undefined; // Or whatever your default is
 };
+
 
 
 const Stack = createNativeStackNavigator();
 
 const App = () => {
+  let [fontsLoaded] = useFonts({
+    Poppins_400Regular,
+    Poppins_600SemiBold,
+    Poppins_700Bold,
+  });
+
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {

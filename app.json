@@ -32,6 +32,14 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "7840206e-8764-4e7a-a8ab-6f9d05cd9c07"
+      }
+    },
+    "plugins": [
+      "expo-audio"
+    ]
   }
 }
